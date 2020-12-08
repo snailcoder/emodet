@@ -25,7 +25,7 @@ These changes lead to a new statistics which is the same with that [DialogueRNN]
 
 | session id | # utterances |
 |  :----:    |    :----:    |
-|    s1      |     1372     |
+|    s1      |     1373     |
 |    s2      |     1356     |
 |    s3      |     1569     |
 |    s4      |     1512     |
