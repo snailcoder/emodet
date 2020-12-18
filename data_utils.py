@@ -3,7 +3,7 @@
 # File              : data_utils.py
 # Author            : Yan <yanwong@126.com>
 # Date              : 03.12.2020
-# Last Modified Date: 16.12.2020
+# Last Modified Date: 18.12.2020
 # Last Modified By  : Yan <yanwong@126.com>
 
 import logging
@@ -35,12 +35,13 @@ def load_vocab(vocab_file):
     logging.info('# Total words in vocab: %d', wid)
   return vocab
 
-def build_w2v(fname, vocab):
+def build_w2v(fname, vocab, d_word):
   """ Build embedding lookup table for words in vocab.
 
   Args:
     fname: The pre-trained word vector file, e.g. GloVe.
     vocab: A dict of words appearing in training corpus.
+    d_word: Dimension of word embeddings.
 
   Returns:
     A dict of pre-trained word vectors for words in vocab.
@@ -49,7 +50,8 @@ def build_w2v(fname, vocab):
   with tf.io.gfile.GFile(fname, 'r') as f:
     for line in f:
       fields = line.split()
-      w, v = fields[0], fields[1:]
+      w = ' '.join(fields[0:len(fields) - d_word])
+      v = fields[-d_word:]
       if w in vocab:
         w2v[w] = np.array(v).astype(np.float)
 
@@ -92,17 +94,20 @@ def clean_str(string):
   string = re.sub(r"\'re", " \'re", string)
   string = re.sub(r"\'d", " \'d", string)
   string = re.sub(r"\'ll", " \'ll", string)
+  string = re.sub(r"\'m", " \'m", string)
+  string = re.sub(r"s\'", "s", string)
+  string = re.sub(r"in\'", "in", string)
   string = re.sub(r",", " , ", string)
   string = re.sub(r"!", " ! ", string)
-  string = re.sub(r"\(", " \( ", string)
-  string = re.sub(r"\)", " \) ", string)
-  string = re.sub(r"\?", " \? ", string)
-  string = re.sub(r"\.", " \.", string)
-  string = re.sub(r"( \.){3}", " (\.){3}", string)
+  string = re.sub(r"\(", " ( ", string)
+  string = re.sub(r"\)", " ) ", string)
+  string = re.sub(r"\?", " ? ", string)
+  string = re.sub(r"\.", " . ", string)
+  string = re.sub(r"( \.){3}", " (.){3} ", string)
   string = re.sub(r"\s{2,}", " ", string)   
   return string.strip().lower()
 
-def create_dataset(file_pattern):
+def load_dataset(file_pattern):
   """Fetches examples from disk into tf.data.TFRecordDataset.
 
     Args:
