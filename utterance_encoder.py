@@ -3,7 +3,7 @@
 # File              : utterance_encoder.py
 # Author            : Yan <yanwong@126.com>
 # Date              : 01.12.2020
-# Last Modified Date: 16.12.2020
+# Last Modified Date: 19.12.2020
 # Last Modified By  : Yan <yanwong@126.com>
 
 import tensorflow as tf
@@ -34,7 +34,7 @@ class CnnUtteranceEncoder(tf.keras.layers.Layer):
     self.dense = tf.keras.layers.Dense(d_sent, activation='relu')
     self.dropout = tf.keras.layers.Dropout(rate)
 
-  def call(self, x, training):
+  def call(self, x, training, mask=None):
     # x.shape == (batch_size, seq_len)
 
     x = self.embedding(x)
