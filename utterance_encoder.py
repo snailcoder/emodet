@@ -3,7 +3,7 @@
 # File              : utterance_encoder.py
 # Author            : Yan <yanwong@126.com>
 # Date              : 01.12.2020
-# Last Modified Date: 19.12.2020
+# Last Modified Date: 21.12.2020
 # Last Modified By  : Yan <yanwong@126.com>
 
 import tensorflow as tf
@@ -46,7 +46,7 @@ class CnnUtteranceEncoder(tf.keras.layers.Layer):
     pooled = [tf.squeeze(p) for p in pooled]
     pooled = tf.concat(pooled, axis=1)  # (batch_size, len(pooled) * filters)
     
-    feature = self.dense(self.dropout(pooled))  # (batch_size, d_sent)
+    feature = self.dense(self.dropout(pooled, training=training))  # (batch_size, d_sent)
 
     return feature
 
