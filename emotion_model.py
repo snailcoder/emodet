@@ -18,11 +18,11 @@ def extract_utterance_features(utters, training, mask, utter_encoder):
   return feat
 
 class ContextFreeModel(tf.keras.layers.Layer):
-  def __init__(self, utter_encoder, units):
+  def __init__(self, utter_encoder, n_classes):
     super(ContextFreeModel, self).__init__()
 
     self.utterance_encoder = utter_encoder
-    self.dense = tf.keras.layers.Dense(units, activation='relu')
+    self.dense = tf.keras.layers.Dense(n_classes, activation='relu')
 
   def call(self, x, training, mask):
     # x.shape == (batch_size, dial_len, sent_len)
@@ -40,7 +40,7 @@ class ContextFreeModel(tf.keras.layers.Layer):
     return pred
 
 class BiLstmModel(tf.keras.layers.Layer):
-  def __init__(self, utter_encoder, units, rate, d_model):
+  def __init__(self, utter_encoder, units, rate, n_classes):
     super(BiLstmModel, self).__init__()
 
     self.utterance_encoder = utter_encoder
@@ -48,7 +48,7 @@ class BiLstmModel(tf.keras.layers.Layer):
                                      return_sequences=True,
                                      recurrent_dropout=rate)
     self.bilstm = tf.keras.layers.Bidirectional(self.lstm)
-    self.dense = tf.keras.layers.Dense(d_model, activation='relu')
+    self.dense = tf.keras.layers.Dense(n_classes, activation='relu')
 
   def call(self, x, training, mask):
     # x.shape == (batch_size, dial_len, sent_len)
@@ -59,8 +59,9 @@ class BiLstmModel(tf.keras.layers.Layer):
     mask = tf.math.reduce_sum(mask, axis=2)  # (batch_size, dial_len)
     mask = tf.cast(tf.math.not_equal(mask, 0), dtype=tf.float32)
 
-    x = self.bilstm(x, training=training, mask=mask)
-    x = self.dense(x)
+    x = self.bilstm(x, training=training, mask=mask)  # (batch_size, dial_len, 2*units)
+    logits = self.dense(x)
+    pred = tf.nn.softmax(logits)
 
-    return x
+    return pred
 
