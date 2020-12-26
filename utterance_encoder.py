@@ -23,10 +23,9 @@ class CnnUtteranceEncoder(tf.keras.layers.Layer):
                d_word, d_sent, rate=0.1, embedding=None):
     super(CnnUtteranceEncoder, self).__init__()
 
-    if embedding is None:
-      self.embedding = tf.keras.layers.Embedding(vocab_size, d_word)
-    else:
-      self.embedding = embedding
+    self.embedding = tf.keras.layers.Embedding(vocab_size, d_word)
+    if embedding is not None:
+      self.embedding.set_weights([embedding])
 
     self.convs = [tf.keras.layers.Conv1D(filters, h, activation='relu')
                   for i, h in enumerate(kernel_sizes)]

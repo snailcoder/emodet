@@ -35,9 +35,8 @@ class ContextFreeModel(tf.keras.layers.Layer):
     x = tf.reshape(x, [batch_size, dial_len, -1])  # (batch_size, dial_len, d_sent)
     
     logits = self.dense(x)
-    pred = tf.nn.softmax(logits)
 
-    return pred
+    return logits
 
 class BiLstmModel(tf.keras.layers.Layer):
   def __init__(self, utter_encoder, units, rate, n_classes):
@@ -61,7 +60,6 @@ class BiLstmModel(tf.keras.layers.Layer):
 
     x = self.bilstm(x, training=training, mask=mask)  # (batch_size, dial_len, 2*units)
     logits = self.dense(x)
-    pred = tf.nn.softmax(logits)
 
-    return pred
+    return logits
 
