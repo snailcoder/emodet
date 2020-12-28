@@ -3,10 +3,11 @@
 # File              : train.py
 # Author            : Yan <yanwong@126.com>
 # Date              : 15.12.2020
-# Last Modified Date: 26.12.2020
+# Last Modified Date: 28.12.2020
 # Last Modified By  : Yan <yanwong@126.com>
 
 import time
+import argparse
 
 import numpy as np
 import tensorflow as tf
@@ -16,24 +17,41 @@ import utterance_encoder
 import emotion_model
 import configuration
 
-train_dataset = data_utils.load_dataset('tfrecords/train-?????-of-?????')
-val_dataset = data_utils.load_dataset('tfrecords/train-?????-of-?????')
+parser = argparse.ArgumentParser(description='Train emotion detection model.')
 
-train_dataset = train_dataset.cache()
-train_dataset = train_dataset.shuffle(10000)
-train_dataset = train_dataset.padded_batch(
-    64, padded_shapes=([None, None], [None, None], [None, None]))
-train_dataset = train_dataset.prefetch(tf.data.experimental.AUTOTUNE)
+parser.add_argument('train_dataset', help='The path of training dataset.')
+parser.add_argument('valid_dataset', help='The path of validation dataset.')
+parser.add_argument('vocab', help='The vocab file.')
+parser.add_argument('embeddings', help='The pre-trained word embeddings file.')
+parser.add_argument('-b', '--buffer_size', type=int, default=10000,
+                    help='Buffr size fo randomly shuffle the training dataset.')
+parser.add_argument('checkpoints', help='The directory for saving checkpoints.')
+parser.add_argument('-m', '--max_to_keep', type=int, default=50,
+                    help='The maximum checkpoints to keep.')
 
-val_dataset = val_dataset.padded_batch(
-    64, padded_shapes=([None, None], [None, None], [None, None]))
+args = parser.parse_args()
 
-vocab = data_utils.load_vocab('tfrecords/vocab.txt')
-w2v = data_utils.build_w2v('../data/glove.840B.300d.txt', vocab, 300)
-embeddings = data_utils.build_vocab_embeddings(w2v, vocab, 300)
+train_dataset = data_utils.load_dataset(args.train_dataset)
+val_dataset = data_utils.load_dataset(args.valid_dataset)
 
 model_config = configuration.ModelConfig()
 train_config = configuration.TrainingConfig()
+
+train_dataset = train_dataset.cache()
+train_dataset = train_dataset.shuffle(args.buffer_size)
+train_dataset = train_dataset.padded_batch(
+    train_config.batch_size,
+    padded_shapes=([None, None], [None, None], [None, None]))
+train_dataset = train_dataset.prefetch(tf.data.experimental.AUTOTUNE)
+
+val_dataset = val_dataset.padded_batch(
+    train_config.batch_size,
+    padded_shapes=([None, None], [None, None], [None, None]))
+
+vocab = data_utils.load_vocab(args.vocab)
+w2v = data_utils.build_w2v(args.embeddings, vocab, model_config.d_word)
+embeddings = data_utils.build_vocab_embeddings(w2v, vocab, model_config.d_word)
+
 
 utter_encoder = utterance_encoder.CnnUtteranceEncoder(
     len(vocab),
@@ -46,7 +64,7 @@ model = emotion_model.ContextFreeModel(utter_encoder, model_config.n_classes)
 optimizer = tf.keras.optimizers.Adam(learning_rate=train_config.learning_rate)
 
 ckpt = tf.train.Checkpoint(model=model, optimizer=optimizer)
-ckpt_manager = tf.train.CheckpointManager(ckpt, 'checkpoints', max_to_keep=50)
+ckpt_manager = tf.train.CheckpointManager(ckpt, args.checkpoints, args.max_to_keep)
 
 if ckpt_manager.latest_checkpoint:
   ckpt.restore(ckpt_manager.latest_checkpoint)
