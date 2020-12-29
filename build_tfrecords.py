@@ -3,7 +3,7 @@
 # File              : build_tfrecords.py
 # Author            : Yan <yanwong@126.com>
 # Date              : 07.04.2020
-# Last Modified Date: 14.12.2020
+# Last Modified Date: 29.12.2020
 # Last Modified By  : Yan <yanwong@126.com>
 
 import os
@@ -176,10 +176,12 @@ def main():
   val_indices = shuffled_indices[:num_validation_sentences]
   train_indices = shuffled_indices[num_validation_sentences:]
 
-  _write_dataset('train', dataset, train_indices,
-                 args.train_shards, args.output_dir)
-  _write_dataset('valid', dataset, val_indices,
-                 args.validation_shards, args.output_dir)
+  if args.validation_percentage < 1.:
+    _write_dataset('train', dataset, train_indices,
+                   args.train_shards, args.output_dir)
+  if args.validation_percentage > 0.:
+    _write_dataset('valid', dataset, val_indices,
+                   args.validation_shards, args.output_dir)
 
 if __name__ == '__main__':
   main()
