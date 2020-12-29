@@ -3,7 +3,7 @@
 # File              : train.py
 # Author            : Yan <yanwong@126.com>
 # Date              : 15.12.2020
-# Last Modified Date: 28.12.2020
+# Last Modified Date: 29.12.2020
 # Last Modified By  : Yan <yanwong@126.com>
 
 import time
@@ -84,18 +84,8 @@ def loss_function(real, pred):
   return tf.math.reduce_mean(loss)
 
 train_loss = tf.keras.metrics.Mean(name='train_loss')
-train_accuracy = tf.keras.metrics.Accuracy(name='train_accuracy')
+# train_accuracy = tf.keras.metrics.Accuracy(name='train_accuracy')
 train_confusion_matrix = metrics.ConfusionMatrix(model_config.n_classes)
-
-def train_metric(real, pred):
-  # real.shape == (batch_size, dial_len)
-  # pred.shape == (batch_size, dial_len, n_classes)
-
-  mask = tf.cast(tf.math.not_equal(real, 0), dtype=tf.float32)
-
-  pred = tf.math.argmax(pred, axis=2)
-  train_accuracy(real, pred, sample_weight=mask)
-  train_confusion_matrix(real, pred, sample_weight=mask)
 
 def train_step(speaker, utterance, emotion):
   # speaker.shape == (batch_size, 1, dial_len)
@@ -115,38 +105,46 @@ def train_step(speaker, utterance, emotion):
   optimizer.apply_gradients(zip(gradients, model.trainable_variables))
 
   train_loss(loss)
-  # train_accuracy(emotion, pred_emotion)
-  # train_confusion_matrix(emotion, pred_emotion)
+
   sample_weight = tf.math.not_equal(tf.math.reduce_sum(mask, axis=2), 0)
   sample_weight = tf.cast(sample_weight, dtype=tf.float32)
   pred_emotion = tf.math.argmax(predictions, axis=2)
 
-  train_accuracy(emotion, pred_emotion, sample_weight=sample_weight)
+  # train_accuracy(emotion, pred_emotion, sample_weight=sample_weight)
   train_confusion_matrix(emotion, pred_emotion, sample_weight=sample_weight)
-  print(train_confusion_matrix.result().numpy())
 
 for epoch in range(train_config.n_epochs):
   start = time.time()
 
   train_loss.reset_states()
-  train_accuracy.reset_states()
+  # train_accuracy.reset_states()
   train_confusion_matrix.reset_states()
 
   for (batch, (speaker, utterance, emotion)) in enumerate(train_dataset):
     train_step(speaker, utterance, emotion)
 
     if batch % 50 == 0:
-      print('Epoch {} Batch {} Loss {:.4f} Accuracy {:.4f}'.format(
-          epoch + 1, batch, train_loss.result(), train_accuracy.result()))
+      report = metrics.classification_report(train_confusion_matrix)
+      print('Epoch {} Batch {} Loss {:.4f} Micro-f1 {:.4f} Macro-f1 {:.4f}'
+          ' Weighted-f1 {:.4f} Accuracy {:.4f}'.format(
+          epoch + 1, batch, train_loss.result(), report[1].numpy(),
+          report[2].numpy(), report[3].numpy(), report[4].numpy()))
+      with np.printoptions(precision=4, suppress=True):
+        print('Metrics of classes:\n', report[0].numpy())
 
   if (epoch + 1) % 5 == 0:
     ckpt_save_path = ckpt_manager.save()
     print ('Saving checkpoint for epoch {} at {}'.format(epoch+1,
                                                          ckpt_save_path))
 
-  print ('Epoch {} Loss {:.4f} Accuracy {:.4f}'.format(epoch + 1, 
-                                                       train_loss.result(),
-                                                       train_accuracy.result()))
+  report = metrics.classification_report(train_confusion_matrix)
+  print('Epoch {} Loss {:.4f} Micro-f1 {:.4f} Macro-f1 {:.4f}'
+      ' Weighted-f1 {:.4f} Accuracy {:.4f}'.format(
+      epoch + 1, train_loss.result(), report[1].numpy(),
+      report[2].numpy(), report[3].numpy(), report[4].numpy()))
+  with np.printoptions(precision=4, suppress=True):
+    print('Metrics of classes:\n', report[0].numpy())
+
   print ('Time taken for 1 epoch: {} secs\n'.format(time.time() - start))
 
 # utter_encoder = utterance_encoder.CnnUtteranceEncoder(3000, 50, [3, 4, 5], 300, 300)
