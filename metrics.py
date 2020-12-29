@@ -3,7 +3,7 @@
 # File              : metrics.py
 # Author            : Yan <yanwong@126.com>
 # Date              : 26.12.2020
-# Last Modified Date: 28.12.2020
+# Last Modified Date: 29.12.2020
 # Last Modified By  : Yan <yanwong@126.com>
 
 import tensorflow as tf
@@ -54,9 +54,54 @@ class ConfusionMatrix(tf.keras.metrics.Metric):
   def reset_states(self):
     self.confusion_matrix.assign(tf.zeros_like(self.confusion_matrix))
 
+def classification_report(confusion_matrix):
+  cmat = confusion_matrix.result()  # (n_classes, 4)
+
+  accuracy = tf.math.divide_no_nan(cmat[:, 0] + cmat[:, 2],
+                                   tf.reduce_sum(cmat, axis=1))
+  precision = tf.math.divide_no_nan(cmat[:, 0],
+                                    cmat[:, 0] + cmat[:, 1])
+  support = cmat[:, 0] + cmat[:, 3]
+  recall = tf.math.divide_no_nan(cmat[:, 0], support)
+  f1_score = tf.math.divide_no_nan(2 * precision * recall,
+                                   precision + recall)
+
+  class_report = tf.concat([
+    tf.expand_dims(accuracy, -1),
+    tf.expand_dims(precision, -1),
+    tf.expand_dims(recall, -1),
+    tf.expand_dims(f1_score, -1),
+    tf.expand_dims(support, -1)], axis=1)  # (n_classes, 5)
+
+  macro_f1_score = tf.math.reduce_mean(f1_score)
+
+  total = tf.math.reduce_sum(cmat, axis=-1)
+  weight = support / total
+
+  weighted_f1_score = tf.math.reduce_sum(weight * f1_score)
+
+  total_tp = tf.math.reduce_sum(cmat[:, 0])
+  total_fp = tf.math.reduce_sum(cmat[:, 1])
+  total_tn = tf.math.reduce_sum(cmat[:, 2])
+  total_fn = tf.math.reduce_sum(cmat[:, 3])
+
+  total_accuracy = tf.math.divide(total_tp,
+                                  tf.math.reduce_sum(support))
+  total_precision = tf.math.divide_no_nan(total_tp, total_tp + total_fp)
+  total_recall = tf.math.divide_no_nan(total_tp, total_tp + total_fn)
+
+  micro_f1_score = tf.math.divide_no_nan(2 * total_precision * total_recall,
+                                         total_precision + total_recall)
+
+  return class_report, total_accuracy, micro_f1_score, macro_f1_score, weighted_f1_score
+
 # metric = ConfusionMatrix(3)
 # metric.update_state([0, 1, 2, 2, 2], [0, 0, 2, 2, 1])
 # print(metric.result().numpy())
+# 
+# class_report, accuracy, micro_f1, macro_f1, weighted_f1 = classification_report(metric)
+# print(class_report, accuracy, micro_f1, macro_f1, weighted_f1)
+
 # metric.update_state([1, 0, 0, 1, 2], [0, 0, 2, 1, 2])
 # print(metric.result().numpy())
 # 
