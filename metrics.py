@@ -57,20 +57,20 @@ class ConfusionMatrix(tf.keras.metrics.Metric):
 def classification_report(confusion_matrix):
   cmat = confusion_matrix.result()  # (n_classes, 4)
 
-  accuracy = tf.math.divide_no_nan(cmat[:, 0] + cmat[:, 2],
-                                   tf.reduce_sum(cmat, axis=1))
   precision = tf.math.divide_no_nan(cmat[:, 0],
                                     cmat[:, 0] + cmat[:, 1])
   support = cmat[:, 0] + cmat[:, 3]
   recall = tf.math.divide_no_nan(cmat[:, 0], support)
   f1_score = tf.math.divide_no_nan(2 * precision * recall,
                                    precision + recall)
+  accuracy = tf.math.divide_no_nan(cmat[:, 0] + cmat[:, 2],
+                                   tf.reduce_sum(cmat, axis=1))
 
   class_report = tf.concat([
-    tf.expand_dims(accuracy, -1),
     tf.expand_dims(precision, -1),
     tf.expand_dims(recall, -1),
     tf.expand_dims(f1_score, -1),
+    tf.expand_dims(accuracy, -1),
     tf.expand_dims(support, -1)], axis=1)  # (n_classes, 5)
 
   macro_f1_score = tf.math.reduce_mean(f1_score)
@@ -93,7 +93,7 @@ def classification_report(confusion_matrix):
   micro_f1_score = tf.math.divide_no_nan(2 * total_precision * total_recall,
                                          total_precision + total_recall)
 
-  return class_report, total_accuracy, micro_f1_score, macro_f1_score, weighted_f1_score
+  return class_report, micro_f1_score, macro_f1_score, weighted_f1_score, total_accuracy
 
 # metric = ConfusionMatrix(3)
 # metric.update_state([0, 1, 2, 2, 2], [0, 0, 2, 2, 1])
