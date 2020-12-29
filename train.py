@@ -113,6 +113,36 @@ def train_step(speaker, utterance, emotion):
   # train_accuracy(emotion, pred_emotion, sample_weight=sample_weight)
   train_confusion_matrix(emotion, pred_emotion, sample_weight=sample_weight)
 
+val_confusion_matrix = metrics.ConfusionMatrix(model_config.n_classes)
+
+def eval_step(speaker, utterance, emotion):
+  speaker = tf.squeeze(speaker)  # (batch_size, dial_len)
+  emotion = tf.squeeze(emotion)  # (batch_size, dial_len)
+
+  mask = tf.cast(tf.math.not_equal(utterance, 0), dtype=tf.float32)
+
+  predictions = model(utterance, False, mask)  # (batch_size, dial_len, n_classes)
+
+  sample_weight = tf.math.not_equal(tf.math.reduce_sum(mask, axis=2), 0)
+  sample_weight = tf.cast(sample_weight, dtype=tf.float32)
+  pred_emotion = tf.math.argmax(predictions, axis=2)
+
+  val_confusion_matrix(emotion, pred_emotion, sample_weight=sample_weight)
+
+def evaluate(val_dataset):
+  val_confusion_matrix.reset_states()
+
+  for (batch, (speaker, utterance, emotion)) in enumerate(val_dataset):
+    eval_step(speaker, utterance, emotion)
+
+  report = metrics.classification_report(val_confusion_matrix)
+  print('Evaluation Micro-f1 {:.4f} Macro-f1 {:.4f}'
+      ' Weighted-f1 {:.4f} Accuracy {:.4f}'.format(
+      report[1].numpy(), report[2].numpy(),
+      report[3].numpy(), report[4].numpy()))
+  with np.printoptions(precision=4, suppress=True):
+    print('Evaluation metrics of classes:\n', report[0].numpy())
+
 for epoch in range(train_config.n_epochs):
   start = time.time()
 
@@ -146,6 +176,9 @@ for epoch in range(train_config.n_epochs):
     print('Metrics of classes:\n', report[0].numpy())
 
   print ('Time taken for 1 epoch: {} secs\n'.format(time.time() - start))
+
+  evaluate(val_dataset)
+
 
 # utter_encoder = utterance_encoder.CnnUtteranceEncoder(3000, 50, [3, 4, 5], 300, 300)
 # # model = emotion_model.ContextFreeModel(utter_encoder, 6)
