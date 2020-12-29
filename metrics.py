@@ -93,15 +93,17 @@ def classification_report(confusion_matrix):
   micro_f1_score = tf.math.divide_no_nan(2 * total_precision * total_recall,
                                          total_precision + total_recall)
 
-  return class_report, micro_f1_score, macro_f1_score, weighted_f1_score, total_accuracy
+  return (class_report, micro_f1_score, macro_f1_score,
+      weighted_f1_score, total_accuracy)
 
 # metric = ConfusionMatrix(3)
 # metric.update_state([0, 1, 2, 2, 2], [0, 0, 2, 2, 1])
 # print(metric.result().numpy())
 # 
-# class_report, accuracy, micro_f1, macro_f1, weighted_f1 = classification_report(metric)
-# print(class_report, accuracy, micro_f1, macro_f1, weighted_f1)
-
+# class_report, micro_f1, macro_f1, weighted_f1, accuracy = classification_report(metric)
+# print(class_report.numpy(), micro_f1.numpy(), macro_f1.numpy(),
+#       weighted_f1.numpy(), accuracy.numpy())
+# 
 # metric.update_state([1, 0, 0, 1, 2], [0, 0, 2, 1, 2])
 # print(metric.result().numpy())
 # 
