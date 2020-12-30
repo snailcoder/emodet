@@ -3,7 +3,7 @@
 # File              : train.py
 # Author            : Yan <yanwong@126.com>
 # Date              : 15.12.2020
-# Last Modified Date: 29.12.2020
+# Last Modified Date: 30.12.2020
 # Last Modified By  : Yan <yanwong@126.com>
 
 import time
@@ -59,7 +59,8 @@ utter_encoder = utterance_encoder.CnnUtteranceEncoder(
     model_config.filters,
     model_config.kernel_sizes,
     model_config.d_word,
-    model_config.d_sent)
+    model_config.d_sent,
+    embedding=embeddings)
 model = emotion_model.ContextFreeModel(utter_encoder, model_config.n_classes)
 
 optimizer = tf.keras.optimizers.Adam(learning_rate=train_config.learning_rate)

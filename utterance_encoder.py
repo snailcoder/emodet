@@ -3,7 +3,7 @@
 # File              : utterance_encoder.py
 # Author            : Yan <yanwong@126.com>
 # Date              : 01.12.2020
-# Last Modified Date: 21.12.2020
+# Last Modified Date: 30.12.2020
 # Last Modified By  : Yan <yanwong@126.com>
 
 import tensorflow as tf
@@ -23,9 +23,13 @@ class CnnUtteranceEncoder(tf.keras.layers.Layer):
                d_word, d_sent, rate=0.1, embedding=None):
     super(CnnUtteranceEncoder, self).__init__()
 
-    self.embedding = tf.keras.layers.Embedding(vocab_size, d_word)
     if embedding is not None:
-      self.embedding.set_weights([embedding])
+      self.embedding = tf.keras.layers.Embedding(
+          vocab_size,
+          d_word,
+          embeddings_initializer=tf.keras.initializers.Constant(embedding))
+    else:
+      self.embedding = tf.keras.layers.Embedding(vocab_size, d_word)
 
     self.convs = [tf.keras.layers.Conv1D(filters, h, activation='relu')
                   for i, h in enumerate(kernel_sizes)]
