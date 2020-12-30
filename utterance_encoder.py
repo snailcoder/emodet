@@ -34,7 +34,10 @@ class CnnUtteranceEncoder(tf.keras.layers.Layer):
     self.convs = [tf.keras.layers.Conv1D(filters, h, activation='relu')
                   for i, h in enumerate(kernel_sizes)]
 
-    self.dense = tf.keras.layers.Dense(d_sent, activation='relu')
+    self.dense = tf.keras.layers.Dense(
+        d_sent,
+        activation='relu',
+        kernel_initializer=tf.keras.initializers.he_uniform())
     self.dropout = tf.keras.layers.Dropout(rate)
 
   def call(self, x, training, mask=None):

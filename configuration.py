@@ -3,7 +3,7 @@
 # File              : configuration.py
 # Author            : Yan <yanwong@126.com>
 # Date              : 17.12.2020
-# Last Modified Date: 21.12.2020
+# Last Modified Date: 30.12.2020
 # Last Modified By  : Yan <yanwong@126.com>
 
 class ModelConfig:
@@ -16,9 +16,16 @@ class ModelConfig:
 
 class TrainingConfig:
   def __init__(self):
-    self.learning_rate = 0.001
+    self.learning_rate = 0.0001
     self.batch_size = 64
     # self.clip_gradients = 5.
     self.n_epochs = 100
     self.freq_val = 100
+    self.loss_weights = [
+        1/0.086747,
+        1/0.144406,
+        1/0.227883,
+        1/0.160585,
+        1/0.127711,
+        1/0.252668]
 

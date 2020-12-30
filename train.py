@@ -79,7 +79,8 @@ def loss_function(real, pred):
   # real.shape == (batch_size, dial_len)
   # pred.shape == (batch_size, dial_len, n_classes)
 
-  loss = loss_object(real, pred)  # (batch_size, dial_len)
+  sample_weight = tf.gather(train_config.loss_weights, real)  # (batch_size, dial_len)
+  loss = loss_object(real, pred, sample_weight=sample_weight)  # (batch_size, dial_len)
   mask = tf.cast(tf.math.not_equal(real, 0), dtype=loss.dtype)
   loss *= mask
   return tf.math.reduce_mean(loss)

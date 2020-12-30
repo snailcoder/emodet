@@ -3,7 +3,7 @@
 # File              : emotion_model.py
 # Author            : Yan <yanwong@126.com>
 # Date              : 03.12.2020
-# Last Modified Date: 21.12.2020
+# Last Modified Date: 30.12.2020
 # Last Modified By  : Yan <yanwong@126.com>
 
 import tensorflow as tf
@@ -22,7 +22,10 @@ class ContextFreeModel(tf.keras.layers.Layer):
     super(ContextFreeModel, self).__init__()
 
     self.utterance_encoder = utter_encoder
-    self.dense = tf.keras.layers.Dense(n_classes, activation='relu')
+    self.dense = tf.keras.layers.Dense(
+        n_classes,
+        activation='relu',
+        kernel_initializer=tf.keras.initializers.he_uniform())
 
   def call(self, x, training, mask):
     # x.shape == (batch_size, dial_len, sent_len)
