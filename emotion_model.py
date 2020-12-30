@@ -17,7 +17,7 @@ def extract_utterance_features(utters, training, mask, utter_encoder):
   feat = tf.reshape(feat, [batch_size, dial_len, -1])  # (batch_size, dial_len, d_sent)
   return feat
 
-class ContextFreeModel(tf.keras.layers.Layer):
+class ContextFreeModel(tf.keras.Model):
   def __init__(self, utter_encoder, n_classes):
     super(ContextFreeModel, self).__init__()
 
@@ -41,7 +41,7 @@ class ContextFreeModel(tf.keras.layers.Layer):
 
     return logits
 
-class BiLstmModel(tf.keras.layers.Layer):
+class BiLstmModel(tf.keras.Model):
   def __init__(self, utter_encoder, units, rate, n_classes):
     super(BiLstmModel, self).__init__()
 

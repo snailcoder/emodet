@@ -27,6 +27,7 @@ parser.add_argument('embeddings', help='The pre-trained word embeddings file.')
 parser.add_argument('-b', '--buffer_size', type=int, default=10000,
                     help='Buffr size fo randomly shuffle the training dataset.')
 parser.add_argument('checkpoints', help='The directory for saving checkpoints.')
+parser.add_argument('saved_model', help='The directory for saving model.')
 parser.add_argument('-m', '--max_to_keep', type=int, default=50,
                     help='The maximum checkpoints to keep.')
 
@@ -139,13 +140,9 @@ def evaluate(val_dataset):
   for (batch, (speaker, utterance, emotion)) in enumerate(val_dataset):
     eval_step(speaker, utterance, emotion)
 
-  report = metrics.classification_report(val_confusion_matrix)
-  print('Evaluation Micro-f1 {:.4f} Macro-f1 {:.4f}'
-      ' Weighted-f1 {:.4f} Accuracy {:.4f}'.format(
-      report[1].numpy(), report[2].numpy(),
-      report[3].numpy(), report[4].numpy()))
-  with np.printoptions(precision=4, suppress=True):
-    print('Evaluation metrics of classes:\n', report[0].numpy())
+  return metrics.classification_report(val_confusion_matrix)
+
+best_weighted_f1 = 0.
 
 for epoch in range(train_config.n_epochs):
   start = time.time()
@@ -157,7 +154,7 @@ for epoch in range(train_config.n_epochs):
   for (batch, (speaker, utterance, emotion)) in enumerate(train_dataset):
     train_step(speaker, utterance, emotion)
 
-    if batch % 50 == 0:
+    if batch % 20 == 0:
       report = metrics.classification_report(train_confusion_matrix)
       print('Epoch {} Batch {} Loss {:.4f} Micro-f1 {:.4f} Macro-f1 {:.4f}'
           ' Weighted-f1 {:.4f} Accuracy {:.4f}'.format(
@@ -181,7 +178,22 @@ for epoch in range(train_config.n_epochs):
 
   print ('Time taken for 1 epoch: {} secs\n'.format(time.time() - start))
 
-  evaluate(val_dataset)
+  eval_report = evaluate(val_dataset)
+
+  print('Evaluation Micro-f1 {:.4f} Macro-f1 {:.4f}'
+      ' Weighted-f1 {:.4f} Accuracy {:.4f}'.format(
+      eval_report[1].numpy(), eval_report[2].numpy(),
+      eval_report[3].numpy(), eval_report[4].numpy()))
+  with np.printoptions(precision=4, suppress=True):
+    print('Evaluation metrics of classes:\n', eval_report[0].numpy())
+
+  weighted_f1 = eval_report[3].numpy()
+  if weighted_f1 > best_weighted_f1:
+    best_weighted_f1 = weighted_f1
+    model.save(args.saved_model)
+    print('Newest best weighted F1 score: {:.4f}'.format(best_weighted_f1))
+
+print('Best weighted F1 score: {:.4f}'.format(best_weighted_f1))
 
 
 # utter_encoder = utterance_encoder.CnnUtteranceEncoder(3000, 50, [3, 4, 5], 300, 300)
