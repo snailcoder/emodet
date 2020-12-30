@@ -75,13 +75,15 @@ if ckpt_manager.latest_checkpoint:
 loss_object = tf.keras.losses.SparseCategoricalCrossentropy(
     from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
 
-def loss_function(real, pred):
+def loss_function(real, pred, mask):
   # real.shape == (batch_size, dial_len)
   # pred.shape == (batch_size, dial_len, n_classes)
+  # mask.shape == (batch_size, dial_len, sent_len)
 
   sample_weight = tf.gather(train_config.loss_weights, real)  # (batch_size, dial_len)
   loss = loss_object(real, pred, sample_weight=sample_weight)  # (batch_size, dial_len)
-  mask = tf.cast(tf.math.not_equal(real, 0), dtype=loss.dtype)
+  mask = tf.cast(tf.math.not_equal(tf.math.reduce_sum(mask, -1), 0),
+                 dtype=loss.dtype)  # (batch_size, dial_len)
   loss *= mask
   return tf.math.reduce_mean(loss)
 
@@ -101,7 +103,7 @@ def train_step(speaker, utterance, emotion):
 
   with tf.GradientTape() as tape:
     predictions = model(utterance, True, mask)  # (batch_size, dial_len, n_classes)
-    loss = loss_function(emotion, predictions)
+    loss = loss_function(emotion, predictions, mask)
 
   gradients = tape.gradient(loss, model.trainable_variables)
   optimizer.apply_gradients(zip(gradients, model.trainable_variables))
