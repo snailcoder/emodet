@@ -58,6 +58,9 @@ def evaluate(test_dataset):
   return metrics.classification_report(confusion_matrix)
 
 test_dataset = data_utils.load_dataset(args.test_dataset)
+test_dataset = test_dataset.padded_batch(
+    30,
+    padded_shapes=([None, None], [None, None], [None, None]))
 
 report = evaluate(test_dataset)
 
