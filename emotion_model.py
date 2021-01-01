@@ -3,7 +3,7 @@
 # File              : emotion_model.py
 # Author            : Yan <yanwong@126.com>
 # Date              : 03.12.2020
-# Last Modified Date: 31.12.2020
+# Last Modified Date: 01.01.2021
 # Last Modified By  : Yan <yanwong@126.com>
 
 import tensorflow as tf
@@ -28,15 +28,18 @@ class ContextFreeModel(tf.keras.Model):
         kernel_initializer=tf.keras.initializers.he_uniform())
 
   def call(self, x, training, mask):
-    # x.shape == (batch_size, dial_len, sent_len)
-    # mask.shape == (batch_szie, dial_len, sent_len)
+    # mask.shape == (batch_size, dial_len, sent_len)
 
-    batch_size, dial_len, sent_len = x.shape
+    if self.utterance_encoder is not None:
+      # x.shape == (batch_size, dial_len, sent_len)
 
-    x = tf.reshape(x, [-1, sent_len])  # (batch_size * dial_len, sent_len)
-    x = self.utterance_encoder(x, training, mask)  # (batch_size * dial_len, d_sent)
-    x = tf.reshape(x, [batch_size, dial_len, -1])  # (batch_size, dial_len, d_sent)
+      batch_size, dial_len, sent_len = x.shape
+
+      x = tf.reshape(x, [-1, sent_len])  # (batch_size * dial_len, sent_len)
+      x = self.utterance_encoder(x, training, mask)  # (batch_size * dial_len, d_sent)
+      x = tf.reshape(x, [batch_size, dial_len, -1])  # (batch_size, dial_len, d_sent)
     
+    # x.shape == (batch_size, dial_len, d_sent)
     logits = self.dense(x)
 
     return logits

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# File              : train.py
+# File              : train_emotion_model.py
 # Author            : Yan <yanwong@126.com>
 # Date              : 15.12.2020
-# Last Modified Date: 30.12.2020
+# Last Modified Date: 01.01.2021
 # Last Modified By  : Yan <yanwong@126.com>
 
 import time
@@ -23,11 +23,13 @@ parser = argparse.ArgumentParser(description='Train emotion detection model.')
 parser.add_argument('train_dataset', help='The path of training dataset.')
 parser.add_argument('valid_dataset', help='The path of validation dataset.')
 parser.add_argument('vocab', help='The vocab file.')
-parser.add_argument('embeddings', help='The pre-trained word embeddings file.')
+# parser.add_argument('embeddings', help='The pre-trained word embeddings file.')
 parser.add_argument('-b', '--buffer_size', type=int, default=10000,
                     help='Buffr size fo randomly shuffle the training dataset.')
 parser.add_argument('checkpoints', help='The directory for saving checkpoints.')
-parser.add_argument('saved_model', help='The directory for saving model.')
+parser.add_argument('save_model', help='The directory for saving model.')
+parser.add_argument('saved_utter_model',
+                    help='The directory containing the checkpoint of utterance encoder.')
 parser.add_argument('-m', '--max_to_keep', type=int, default=50,
                     help='The maximum checkpoints to keep.')
 
@@ -51,18 +53,19 @@ val_dataset = val_dataset.padded_batch(
     padded_shapes=([None, None], [None, None], [None, None]))
 
 vocab = data_utils.load_vocab(args.vocab)
-w2v = data_utils.build_w2v(args.embeddings, vocab, model_config.d_word)
-embeddings = data_utils.build_vocab_embeddings(w2v, vocab, model_config.d_word)
-
+# w2v = data_utils.build_w2v(args.embeddings, vocab, model_config.d_word)
+# embeddings = data_utils.build_vocab_embeddings(w2v, vocab, model_config.d_word)
 
 utter_encoder = utterance_encoder.CnnUtteranceEncoder(
     len(vocab),
     model_config.filters,
     model_config.kernel_sizes,
     model_config.d_word,
-    model_config.d_sent,
-    embedding=embeddings)
-model = emotion_model.ContextFreeModel(utter_encoder, model_config.n_classes)
+    model_config.d_sent)
+utter_model = emotion_model.ContextFreeModel(utter_encoder, model_config.n_classes)
+utter_model.load_weights(args.saved_utter_model)
+
+model = emotion_model.ContextFreeModel(None, model_config.n_classes)
 
 optimizer = tf.keras.optimizers.Adam(learning_rate=train_config.learning_rate)
 
@@ -102,6 +105,8 @@ def train_step(speaker, utterance, emotion):
 
   mask = tf.cast(tf.math.not_equal(utterance, 0), dtype=tf.float32)
 
+  utterance = utter_encoder(utterance, False)  # (batch_size, dial_len, d_sent)
+
   with tf.GradientTape() as tape:
     predictions = model(utterance, True, mask)  # (batch_size, dial_len, n_classes)
     loss = loss_function(emotion, predictions, mask)
@@ -115,7 +120,6 @@ def train_step(speaker, utterance, emotion):
   sample_weight = tf.cast(sample_weight, dtype=tf.float32)
   pred_emotion = tf.math.argmax(predictions, axis=2)
 
-  # train_accuracy(emotion, pred_emotion, sample_weight=sample_weight)
   train_confusion_matrix(emotion, pred_emotion, sample_weight=sample_weight)
 
 val_confusion_matrix = metrics.ConfusionMatrix(model_config.n_classes)
@@ -190,7 +194,7 @@ for epoch in range(train_config.n_epochs):
   weighted_f1 = eval_report[3].numpy()
   if weighted_f1 > best_weighted_f1:
     best_weighted_f1 = weighted_f1
-    model.save(args.saved_model)
+    model.save(args.save_model)
     print('Newest best weighted F1 score: {:.4f}'.format(best_weighted_f1))
 
 print('Best weighted F1 score: {:.4f}'.format(best_weighted_f1))
