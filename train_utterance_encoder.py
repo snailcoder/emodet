@@ -3,7 +3,7 @@
 # File              : train_utterance_encoder.py
 # Author            : Yan <yanwong@126.com>
 # Date              : 15.12.2020
-# Last Modified Date: 01.01.2021
+# Last Modified Date: 04.01.2021
 # Last Modified By  : Yan <yanwong@126.com>
 
 import time
@@ -190,7 +190,7 @@ for epoch in range(train_config.n_epochs):
   weighted_f1 = eval_report[3].numpy()
   if weighted_f1 > best_weighted_f1:
     best_weighted_f1 = weighted_f1
-    model.save(args.saved_model)
+    model.save_weights(args.saved_model)
     print('Newest best weighted F1 score: {:.4f}'.format(best_weighted_f1))
 
 print('Best weighted F1 score: {:.4f}'.format(best_weighted_f1))

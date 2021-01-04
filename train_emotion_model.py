@@ -3,7 +3,7 @@
 # File              : train_emotion_model.py
 # Author            : Yan <yanwong@126.com>
 # Date              : 15.12.2020
-# Last Modified Date: 01.01.2021
+# Last Modified Date: 04.01.2021
 # Last Modified By  : Yan <yanwong@126.com>
 
 import time
@@ -27,8 +27,8 @@ parser.add_argument('vocab', help='The vocab file.')
 parser.add_argument('-b', '--buffer_size', type=int, default=10000,
                     help='Buffr size fo randomly shuffle the training dataset.')
 parser.add_argument('checkpoints', help='The directory for saving checkpoints.')
-parser.add_argument('save_model', help='The directory for saving model.')
-parser.add_argument('saved_utter_model',
+parser.add_argument('saved_model', help='The directory for saving model.')
+parser.add_argument('utterance_encoder',
                     help='The directory containing the checkpoint of utterance encoder.')
 parser.add_argument('-m', '--max_to_keep', type=int, default=50,
                     help='The maximum checkpoints to keep.')
@@ -95,6 +95,14 @@ train_loss = tf.keras.metrics.Mean(name='train_loss')
 # train_accuracy = tf.keras.metrics.Accuracy(name='train_accuracy')
 train_confusion_matrix = metrics.ConfusionMatrix(model_config.n_classes)
 
+def encode_utterance(utterance):
+  batch_size, dial_len, sent_len = utterance.shape
+
+  utterance = tf.reshape(utterance, [-1, sent_len])
+  utterance = utter_model.utterance_encoder(utterance, False, None)
+
+  return tf.reshape(utterance, [batch_size, dial_len, -1])
+
 def train_step(speaker, utterance, emotion):
   # speaker.shape == (batch_size, 1, dial_len)
   # emotion.shape == (batch_size, 1, dial_len)
@@ -105,7 +113,7 @@ def train_step(speaker, utterance, emotion):
 
   mask = tf.cast(tf.math.not_equal(utterance, 0), dtype=tf.float32)
 
-  utterance = utter_encoder(utterance, False)  # (batch_size, dial_len, d_sent)
+  utterance = encode_utterance(utterance)  # (batch_size, dial_len, d_sent)
 
   with tf.GradientTape() as tape:
     predictions = model(utterance, True, mask)  # (batch_size, dial_len, n_classes)
@@ -129,6 +137,8 @@ def eval_step(speaker, utterance, emotion):
   emotion = tf.squeeze(emotion)  # (batch_size, dial_len)
 
   mask = tf.cast(tf.math.not_equal(utterance, 0), dtype=tf.float32)
+
+  utterance = encode_utterance(utterance)
 
   predictions = model(utterance, False, mask)  # (batch_size, dial_len, n_classes)
 
@@ -194,7 +204,7 @@ for epoch in range(train_config.n_epochs):
   weighted_f1 = eval_report[3].numpy()
   if weighted_f1 > best_weighted_f1:
     best_weighted_f1 = weighted_f1
-    model.save(args.save_model)
+    model.save_weights(args.save_model)
     print('Newest best weighted F1 score: {:.4f}'.format(best_weighted_f1))
 
 print('Best weighted F1 score: {:.4f}'.format(best_weighted_f1))
