@@ -209,7 +209,7 @@ for epoch in range(train_config.n_epochs):
   weighted_f1 = eval_report[3].numpy()
   if weighted_f1 > best_weighted_f1:
     best_weighted_f1 = weighted_f1
-    model.save_weights(args.save_model)
+    model.save_weights(args.saved_model)
     print('Newest best weighted F1 score: {:.4f}'.format(best_weighted_f1))
 
 print('Best weighted F1 score: {:.4f}'.format(best_weighted_f1))
