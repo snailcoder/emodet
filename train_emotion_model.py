@@ -3,7 +3,7 @@
 # File              : train_emotion_model.py
 # Author            : Yan <yanwong@126.com>
 # Date              : 15.12.2020
-# Last Modified Date: 04.01.2021
+# Last Modified Date: 08.01.2021
 # Last Modified By  : Yan <yanwong@126.com>
 
 import time
@@ -63,9 +63,14 @@ utter_encoder = utterance_encoder.CnnUtteranceEncoder(
     model_config.d_word,
     model_config.d_sent)
 utter_model = emotion_model.ContextFreeModel(utter_encoder, model_config.n_classes)
-utter_model.load_weights(args.saved_utter_model)
+utter_model.load_weights(args.utterance_model)
 
-model = emotion_model.ContextFreeModel(None, model_config.n_classes)
+# model = emotion_model.ContextFreeModel(None, model_config.n_classes)
+model = emotion_model.BiLstmModel(None,
+                                  model_config.recur_units,
+                                  model_config.d_context,
+                                  model_config.recur_dropout,
+                                  model_config.n_classes)
 
 optimizer = tf.keras.optimizers.Adam(learning_rate=train_config.learning_rate)
 

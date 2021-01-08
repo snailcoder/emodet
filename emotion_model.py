@@ -3,7 +3,7 @@
 # File              : emotion_model.py
 # Author            : Yan <yanwong@126.com>
 # Date              : 03.12.2020
-# Last Modified Date: 01.01.2021
+# Last Modified Date: 08.01.2021
 # Last Modified By  : Yan <yanwong@126.com>
 
 import tensorflow as tf
@@ -89,27 +89,41 @@ class CnnModel(tf.keras.Model):
     return tf.reshape(logits, [-1, dial_len, n_classes])
 
 class BiLstmModel(tf.keras.Model):
-  def __init__(self, utter_encoder, units, rate, n_classes):
+  def __init__(self, utter_encoder, recur_units, dff, dropout, n_classes):
     super(BiLstmModel, self).__init__()
 
     self.utterance_encoder = utter_encoder
-    self.lstm = tf.keras.layers.LSTM(units,
-                                     return_sequences=True,
-                                     recurrent_dropout=rate)
-    self.bilstm = tf.keras.layers.Bidirectional(self.lstm)
-    self.dense = tf.keras.layers.Dense(n_classes, activation='relu')
+    self.lstm1 = tf.keras.layers.LSTM(recur_units,
+                                      return_sequences=True,
+                                      recurrent_dropout=dropout)
+    self.lstm2 = tf.keras.layers.LSTM(recur_units,
+                                      return_sequences=True,
+                                      recurrent_dropout=dropout)
+    self.bilstm1 = tf.keras.layers.Bidirectional(self.lstm1)
+    self.bilstm2 = tf.keras.layers.Bidirectional(self.lstm2)
+    self.dense1 = tf.keras.layers.Dense(dff, activation='relu')
+    self.dense2 = tf.keras.layers.Dense(n_classes, activation='relu')
+    self.dropout = tf.keras.layers.Dropout(dropout)
 
   def call(self, x, training, mask):
-    # x.shape == (batch_size, dial_len, sent_len)
     # mask.shape == (batch_size, dial_len, sent_len)
 
-    x = extract_utterance_features(x, training, mask, self.utterance_encoder)
+    if self.utterance_encoder is not None:
+      # x.shape == (batch_size, dial_len, sent_len)
+
+      batch_size, dial_len, sent_len = x.shape
+
+      x = tf.reshape(x, [-1, sent_len])  # (batch_size * dial_len, sent_len)
+      x = self.utterance_encoder(x, training, mask)  # (batch_size * dial_len, d_sent)
+      x = tf.reshape(x, [batch_size, dial_len, -1])  # (batch_size, dial_len, d_sent)
 
     mask = tf.math.reduce_sum(mask, axis=2)  # (batch_size, dial_len)
     mask = tf.cast(tf.math.not_equal(mask, 0), dtype=tf.float32)
 
-    x = self.bilstm(x, training=training, mask=mask)  # (batch_size, dial_len, 2*units)
-    logits = self.dense(x)
+    x = self.bilstm1(x, training=training, mask=mask)  # (batch_size, dial_len, 2*units)
+    x = self.bilstm2(x, training=training, mask=mask)  # (batch_size, dial_len, 2*units)
+    x = self.dense1(self.dropout(x, training=training))  # (batch_size, dial_len, dff)
+    logits = self.dense2(x)
 
     return logits
 
