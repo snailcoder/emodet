@@ -3,7 +3,7 @@
 # File              : train_utterance_encoder.py
 # Author            : Yan <yanwong@126.com>
 # Date              : 15.12.2020
-# Last Modified Date: 04.01.2021
+# Last Modified Date: 08.01.2021
 # Last Modified By  : Yan <yanwong@126.com>
 
 import time
@@ -86,7 +86,7 @@ def loss_function(real, pred, mask):
   mask = tf.cast(tf.math.not_equal(tf.math.reduce_sum(mask, -1), 0),
                  dtype=loss.dtype)  # (batch_size, dial_len)
   loss *= mask
-  return tf.math.reduce_mean(loss)
+  return tf.math.reduce_sum(loss) / tf.math.reduce_sum(mask)
 
 train_loss = tf.keras.metrics.Mean(name='train_loss')
 # train_accuracy = tf.keras.metrics.Accuracy(name='train_accuracy')
