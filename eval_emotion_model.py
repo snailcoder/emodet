@@ -3,7 +3,7 @@
 # File              : eval_emotion_model.py
 # Author            : Yan <yanwong@126.com>
 # Date              : 30.12.2020
-# Last Modified Date: 01.01.2021
+# Last Modified Date: 08.01.2021
 # Last Modified By  : Yan <yanwong@126.com>
 
 import argparse
@@ -21,7 +21,10 @@ parser = argparse.ArgumentParser(description='Evaluate emotion detection model.'
 
 parser.add_argument('test_dataset', help='The path of test dataset.')
 parser.add_argument('vocab', help='The vocab file.')
-parser.add_argument('saved_model', help='The directory for saving model.')
+parser.add_argument('utterance_encoder',
+                    help='The directory containing the checkpoint of utterance encoder.')
+parser.add_argument('emotion_model',
+                    help='The directory saving checkpoint of emotion model.')
 
 args = parser.parse_args()
 
@@ -34,18 +37,34 @@ utter_encoder = utterance_encoder.CnnUtteranceEncoder(
     model_config.kernel_sizes,
     model_config.d_word,
     model_config.d_sent)
-model = emotion_model.ContextFreeModel(utter_encoder, model_config.n_classes)
+utter_model = emotion_model.ContextFreeModel(utter_encoder, model_config.n_classes)
+utter_model.load_weights(args.utterance_encoder)
 
-model.load_weights(args.saved_model)
+model = emotion_model.BiLstmModel(None,
+                                  model_config.recur_units,
+                                  model_config.d_context,
+                                  model_config.recur_dropout,
+                                  model_config.n_classes)
+model.load_weights(args.emotion_model)
+
+def encode_utterance(utterance):
+  batch_size, dial_len, sent_len = utterance.shape
+
+  utterance = tf.reshape(utterance, [-1, sent_len])
+  utterance = utter_model.utterance_encoder(utterance, False, None)
+
+  return tf.reshape(utterance, [batch_size, dial_len, -1])
 
 def evaluate(test_dataset):
   confusion_matrix = metrics.ConfusionMatrix(model_config.n_classes)
 
-  for (batch, (speaker, utterance, emotion)) in enumerate(val_dataset):
+  for (batch, (speaker, utterance, emotion)) in enumerate(test_dataset):
     speaker = tf.squeeze(speaker)  # (batch_size, dial_len)
     emotion = tf.squeeze(emotion)  # (batch_size, dial_len)
 
     mask = tf.cast(tf.math.not_equal(utterance, 0), dtype=tf.float32)
+
+    utterance = encode_utterance(utterance)
 
     predictions = model(utterance, False, mask)  # (batch_size, dial_len, n_classes)
 
